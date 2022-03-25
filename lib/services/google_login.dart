@@ -4,22 +4,25 @@ import 'package:flutter_firebase/blocs/login_event.dart';
 import 'package:flutter_firebase/blocs/login_state.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 
-Future<UserCredential> signInWithGoogle(LoginPressed event, Emitter<LoginState> emit) async {
+Future<void> signInWithGoogle(
+    LoginPressed event, Emitter<LoginState> emit) async {
+  try {
+    emit(LoginLoading());
 
-  emit(LoginLoading());
+    final GoogleSignInAccount? googleUser = await GoogleSignIn().signIn();
 
-  // Trigger the authentication flow
-  final GoogleSignInAccount? googleUser = await GoogleSignIn().signIn();
+    final GoogleSignInAuthentication? googleAuth =
+        await googleUser?.authentication;
 
-  // Obtain the auth details from the request
-  final GoogleSignInAuthentication? googleAuth = await googleUser?.authentication;
+    final credential = GoogleAuthProvider.credential(
+      accessToken: googleAuth?.accessToken,
+      idToken: googleAuth?.idToken,
+    );
+    emit(LoginSuccess(msg: 'Success', route: '/home'));
 
-  // Create a new credential
-  final credential = GoogleAuthProvider.credential(
-    accessToken: googleAuth?.accessToken,
-    idToken: googleAuth?.idToken,
-  );
-
-  // Once signed in, return the UserCredential
-  return await FirebaseAuth.instance.signInWithCredential(credential);
+    var cred = await FirebaseAuth.instance.signInWithCredential(credential);
+  } on Exception catch (e) {
+    print(e.toString());
+    emit(LoginFailure(msg: "Login Failed"));
+  }
 }
